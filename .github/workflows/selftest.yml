@@ -38,7 +38,8 @@ jobs:
         run: python tools/sync_claude.py --check
 
       - name: py_compile
-        run: python -m py_compile skills/teamwork/scripts/*.py
+        # 不要用 shell 通配符：Windows runner 默认 PowerShell，不会展开 *.py
+        run: python -m compileall -q skills/teamwork/scripts tools
 
       - name: 运行 23 阶段自检
         env:
