@@ -1,38 +1,36 @@
 ---
 schema_version: 1
-run: "<run_id>"
-tier: Small
-iterations: 1
+run: "20261029-201500-技术选型对比"
+tier: Large
+iterations: 3
 trajectory:
-  - iteration: 1
-    total: 86
-    verdict: PASS
-outcome: "完成：<一句话总结交付结果与最终 verdict>"
+  - {iteration: 1, total: 74, verdict: FAIL}
+  - {iteration: 2, total: 78, verdict: REVISE}
+  - {iteration: 3, total: 82, verdict: REVISE}
+advisory_response: accept   # accept | decline；建议续跑时必填，否则 finish 拒绝
+advisory_reason: "<decline 时必填，≥10 字；accept 可省略>"
+outcome: "完成选型对比；建议续跑 1 轮补齐证据，用户已确认"
 ---
 
 # 最终报告
 
-## 任务
-
-<用户原始任务（取自 00_intake/task.md）>
-
-## 结果
-
-- 结论：<交付了什么>
-- 最终 verdict：<PASS/REVISE/FAIL>
-- 产物：`final_result.md`、`run_report.md`、`review_report_A.md`、`review_scores.md`
-
 ## 分数轨迹
 
-| 轮次 | 总分 | verdict | 策略版本 |
-| --- | --- | --- | --- |
-| 1 | 86 | PASS | v0 |
+| 轮次 | 分数 | 结论 | 关键变化 |
+|---|---|---|---|
+| 1 | 74 | FAIL | 取证与写作同人，证据维度 62 |
+| 2 | 78 | REVISE | 单设取证 worker，证据 +8 |
+| 3 | 82 | REVISE | 证据 68，仍差 3 分 |
+
+## 末轮建议与用户决定
+
+- 脚本建议：<continue/stop> +N 轮（数字由脚本算，理由见 `iterations/iter-03/iteration_advisory.md`）
+- 用户选择：<accept/decline + 理由>
+
+## 交付物
+
+- <路径>（sha256 …）
 
 ## 遗留问题
 
-- <unresolved 里的事项；没有就写“无”>
-
-## 复盘
-
-- 做得好的：<可复用>
-- 下次改进：<具体>
+- <unresolved>

@@ -38,9 +38,9 @@ jobs:
         run: python tools/sync_claude.py --check
 
       - name: py_compile
-        run: python -m py_compile skills/teamwork/scripts/teamwork_lib.py skills/teamwork/scripts/render_text.py skills/teamwork/scripts/render_diagram.py skills/teamwork/scripts/orchestrator.py skills/teamwork/scripts/validate.py skills/teamwork/scripts/selftest.py
+        run: python -m py_compile skills/teamwork/scripts/*.py
 
-      - name: 运行 13 阶段自检
+      - name: 运行 23 阶段自检
         env:
           TEAMWORK_RUNS_ROOT: ${{ runner.temp }}/teamwork-runs
         run: python skills/teamwork/scripts/selftest.py

@@ -23,10 +23,12 @@
 脚本 `status` / `next` 返回 `status_line`，格式固定：
 
 ```
-Iteration i/N · Phase 阶段 · Tier 等级 · Workers k · Score s VERDICT · 策略 vX
+Iteration i/N · Phase 阶段 · Tier 等级 · Workers k · Reviewers r · Audit A:general/B:citation_audit · Score s VERDICT · 策略 vX · 建议 +k 轮
 ```
 
 - `Score` 取最近一轮审核合成总分；尚未审核时显示 `-`。
+- `Audit` 只在 L 级且引用核验开启时出现，标明哪位评审负责什么角色。
+- 末轮建议在 `score` 之后追加「建议 +k 轮」或「建议收尾」（来自 `iteration_advisory.md`）。
 - 每阶段推进后在聊天里输出这一行，并贴框架图。
 
 ## 聊天里怎么展示
@@ -65,7 +67,7 @@ Iteration i/N · Phase 阶段 · Tier 等级 · Workers k · Score s VERDICT · 
 ```text
 主 Agent
   ├─ CLASSIFY → PLAN → DISPATCH → WORKERS（w01…wNN）
-  └─ FINAL → GATE ──PASS──→ REVIEW → DREAM → 下一轮 PLAN
+  └─ FINAL → GATE ──PASS──→ REVIEW → COACH → 下一轮 PLAN
         └─REWORK（≤2 次）→ WORKERS
 ```
 

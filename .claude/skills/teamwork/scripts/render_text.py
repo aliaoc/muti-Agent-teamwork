@@ -27,8 +27,8 @@ def write_mermaid(run_dir: Path, state: dict) -> Path:
         '    F --> G["主 Agent 验收"]',
         '    G -->|REWORK| W',
         '    G -->|PASS| R["审核 Agent ×' + str(reviewers) + '"]',
-        '    R --> DR["复盘 / 做梦"]',
-        '    DR -.下一轮.-> C',
+        '    R --> CO["教练复盘"]',
+        '    CO -.下一轮.-> P',
         "  end",
         "  M --> C",
         "  S[(Artifact Store)] --- W",
@@ -41,7 +41,7 @@ def write_mermaid(run_dir: Path, state: dict) -> Path:
         "FINAL": "F",
         "GATE": "G",
         "REVIEW": "R",
-        "DREAM": "DR",
+        "COACH": "CO",
     }
     lines.append("  classDef current fill:#F58518,stroke:#B85F00,color:#fff;")
     if current in classes:

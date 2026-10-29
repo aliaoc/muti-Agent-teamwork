@@ -5,15 +5,15 @@
     "url": "https://github.com/aliaoc"
   },
   "metadata": {
-    "description": "teamwork：分级多子 Agent 协作 + 独立审核 + Dream-RSI 式策略复盘",
-    "version": "1.0.0"
+    "description": "teamwork：分级多子 Agent 协作 + 独立审核（含引用核验）+ 环内 COACH / 环外 RSI",
+    "version": "2.0.0"
   },
   "plugins": [
     {
       "name": "teamwork",
       "source": "./",
-      "description": "多子 Agent 协作技能包：S/M/L 分级、跨轮 Worker 复用、独立审核 Agent、Dream-RSI 式审核策略复盘、N 轮迭代、Markdown 产物与协作框架图。",
-      "version": "1.0.0"
+      "description": "多子 Agent 协作技能包：S/M/L 分级、跨轮 Worker 复用、独立审核 Agent（L 级默认 A+B 引用核验）、COACH 改进条目切片、末轮建议、extend 续跑、环外经验库与尺子演进、Markdown 产物与协作框架图。",
+      "version": "2.0.0"
     }
   ]
 }

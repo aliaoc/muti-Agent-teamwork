@@ -4,7 +4,7 @@
 顺序：
     1. py_compile  skills/teamwork/scripts/*.py
     2. sync --check（skills/teamwork 与 .claude/skills/teamwork 字节一致）
-    3. 13 阶段 selftest（可用 --skip-selftest 跳过）
+    3. 23 阶段 selftest（可用 --skip-selftest 跳过）
 
 用法：
     python3 tools/check.py
@@ -64,7 +64,7 @@ def main() -> int:
     ok &= run("sync --check", [sys.executable, "tools/sync_claude.py", "--check"])
 
     if args.skip_selftest:
-        print("\n== 13 阶段 selftest（已跳过）==")
+        print("\n== 23 阶段 selftest（已跳过）==")
     else:
         CHECK_RUNS.mkdir(parents=True, exist_ok=True)
         env = {
@@ -73,7 +73,7 @@ def main() -> int:
             "PYTHONUTF8": "1",
             "PYTHONIOENCODING": "utf-8",
         }
-        ok &= run("13 阶段 selftest", [sys.executable, str(SCRIPTS / "selftest.py")], env=env)
+        ok &= run("23 阶段 selftest", [sys.executable, str(SCRIPTS / "selftest.py")], env=env)
 
     print()
     if ok:

@@ -93,7 +93,7 @@ DeepSeek Harness 的 `spawn_teammate/send_message` 可以保持物理 Agent 跨�
 python3 -m pip install pyyaml       # 必需
 python3 -m pip install matplotlib   # 可选：PNG 框架图
 
-# 自检（13 阶段）
+# 自检（23 阶段）
 python3 skills/teamwork/scripts/selftest.py
 
 # 在一处验证技能可被正确执行：让 Claude 跑一个 1 轮小任务，观察 run 目录与状态行

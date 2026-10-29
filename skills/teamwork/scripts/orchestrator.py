@@ -83,8 +83,21 @@ def _status_human(data: dict) -> None:
     print(f"迭代   : {data['current_iter']}")
     print(f"审核   : ×{data['reviewers']}（策略 {data['policy_version']}）")
     print(f"Worker : " + ("、".join(f"{w['id']}={w['status']}" for w in data["workers"]) or "（未派发）"))
+    coach = data.get("coach") or {}
+    if coach.get("entries") or coach.get("stuck_classes"):
+        last = (coach.get("entries") or [{}])[-1]
+        print(
+            f"教练   : 命中率 {last.get('hit_rate') if last.get('hit_rate') is not None else '—'}"
+            f" · 卡住类别 {', '.join(coach.get('stuck_classes') or []) or '无'}"
+        )
     if data["scores"]:
         print("分数   : " + " → ".join(f"{s['total']} {s['verdict']}" for s in data["scores"]))
+    advisory = data.get("advisory") or {}
+    if advisory:
+        print(
+            f"建议   : {advisory['recommendation']} +{advisory['recommended_rounds']} 轮"
+            f"（{advisory['score']} {advisory['verdict']}）"
+        )
     print(f"看板   : {data['progress']}")
     print(f"框架图 : {data.get('framework_png') or '（未生成：未安装 matplotlib）'}")
     print(f"状态行 : {data['status_line']}")
@@ -140,10 +153,11 @@ def cmd_check(args: argparse.Namespace) -> int:
     run = _resolve_run(args)
     state = lib.load_state(run)
     if args.phase:
-        if args.phase not in lib.PHASES:
+        phase = lib.PHASE_ALIASES.get(args.phase, args.phase)
+        if phase not in lib.PHASES:
             raise lib.TeamworkError(f"未知阶段：{args.phase}")
         state = dict(state)
-        state["phase"] = args.phase
+        state["phase"] = phase
     check = lib.Check(run, state)
     lib.validate_phase(check)
     if args.json:
@@ -184,6 +198,27 @@ def cmd_advance(args: argparse.Namespace) -> int:
         print(f"阶段推进：{result['from']} → {result['to']}（第 {result['iteration']}/{result['n']} 轮）")
         print(f"状态行：{result['status_line']}")
         print(f"框架图：{result['framework_png']}")
+        coach = result.get("coach") or {}
+        if coach.get("items") or coach.get("hit_rate") is not None:
+            print(
+                f"教练：{len(coach.get('items') or [])} 条条目 · "
+                f"命中率 {coach.get('hit_rate') if coach.get('hit_rate') is not None else '—'}"
+            )
+        advisory = result.get("advisory") or {}
+        if advisory:
+            print("--- 末轮建议（必须原样播报给用户）---")
+            print(
+                f"本轮 {advisory['score']} 分 / {advisory['verdict']}"
+                f"（较上轮 {advisory['delta'] if advisory['delta'] is not None else '—'}，"
+                f"短板：{lib.DIM_LABELS.get(advisory['weakest_dimension']['name'], '—')}"
+                f" {advisory['weakest_dimension']['score']}）"
+            )
+            if advisory["recommendation"] == "continue":
+                print(
+                    f"建议再迭代 {advisory['recommended_rounds']} 轮：{advisory['rationale']}"
+                )
+            else:
+                print(f"建议就此收尾：{advisory['rationale']}")
         print("--- 下一步 ---")
         _human_next(lib.build_next(run))
     return 0
@@ -294,6 +329,88 @@ def cmd_stop(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_extend(args: argparse.Namespace) -> int:
+    run = _resolve_run(args)
+    result = lib.extend_run(run, args.rounds, args.reason, force=args.force)
+    if args.json:
+        _out_json(result)
+    else:
+        print(
+            f"已追加：第 {result['from_iteration']} 轮 → 第 {result['to_iteration']} 轮，"
+            f"n={result['n']}，当前阶段 {result['phase']}"
+        )
+    return 0
+
+
+def cmd_citation_audit(args: argparse.Namespace) -> int:
+    run = _resolve_run(args)
+    if args.on == args.off:
+        raise lib.TeamworkError("citation-audit 需要且只需要 --on 或 --off 之一")
+    result = lib.set_citation_audit(run, bool(args.on), args.reason)
+    if args.json:
+        _out_json(result)
+    else:
+        print(
+            f"引用核验：{result['citation_audit']}（评审 ×{result['reviewers']}）；"
+            "L 级默认开启，B 专责逐条核验"
+        )
+    return 0
+
+
+def cmd_coach_show(args: argparse.Namespace) -> int:
+    run = _resolve_run(args)
+    data = lib.coach_show(run)
+    if args.json:
+        _out_json(data)
+    else:
+        print(f"当前轮次：{data['iteration']}")
+        print(f"卡住类别：{', '.join(data['stuck_classes']) or '无'}")
+        print(f"已判无效：{', '.join(data['ineffective']) or '无'}")
+        for entry in data["entries"]:
+            print(
+                f"  第 {entry.get('iteration')} 轮：条目 {len(entry.get('items') or [])} · "
+                f"命中率 {entry.get('hit_rate') if entry.get('hit_rate') is not None else '—'}"
+            )
+        advisory = data.get("advisory")
+        if advisory:
+            print(
+                f"末轮建议：{advisory['recommendation']} +{advisory['recommended_rounds']} 轮"
+            )
+    return 0
+
+
+def cmd_dream(args: argparse.Namespace) -> int:
+    import rsi_store  # noqa: WPS433
+
+    if args.approve:
+        path = rsi_store.approve(args.approve)
+        print(f"已批准策略：{args.approve} -> {path}")
+        return 0
+    if args.rollback is not None:
+        version = rsi_store.rollback(args.rollback or None)
+        print(f"已回滚到：{version}")
+        return 0
+    path = rsi_store.build_proposal()
+    if args.json:
+        _out_json({"proposal": str(path)})
+    else:
+        print(f"提案已生成：{path}")
+        print("批准：python scripts/orchestrator.py dream --approve <版本号>")
+    return 0
+
+
+def cmd_adopt_policy(args: argparse.Namespace) -> int:
+    import rsi_store  # noqa: WPS433
+
+    run = _resolve_run(args)
+    result = rsi_store.adopt_policy(run, args.version)
+    if args.json:
+        _out_json(result)
+    else:
+        print(f"已采纳策略 {result['policy_version']}（{result['path']}）")
+    return 0
+
+
 def cmd_finish(args: argparse.Namespace) -> int:
     run = _resolve_run(args)
     result = lib.finish_run(run)
@@ -366,6 +483,39 @@ def build_parser() -> argparse.ArgumentParser:
     stop = sub.add_parser("stop", parents=[common], help="提前停止（保留产物）")
     stop.add_argument("--reason", default="")
     stop.set_defaults(func=cmd_stop)
+
+    extend = sub.add_parser("extend", parents=[common], help="DONE 后追加轮次（续跑）")
+    extend.add_argument("--rounds", type=int, required=True, help="追加轮数（1–3）")
+    extend.add_argument("--reason", default="")
+    extend.add_argument("--force", action="store_true", help="归档旧 final_report 后再追加")
+    extend.set_defaults(func=cmd_extend)
+
+    citation = sub.add_parser(
+        "citation-audit", parents=[common], help="开关 L 级引用核验（B 专责）"
+    )
+    citation.add_argument("--on", action="store_true")
+    citation.add_argument("--off", action="store_true")
+    citation.add_argument("--reason", default="")
+    citation.set_defaults(func=cmd_citation_audit)
+
+    coach = sub.add_parser("coach-show", parents=[common], help="查看教练条目与命中率")
+    coach.set_defaults(func=cmd_coach_show)
+
+    dream = sub.add_parser("dream", help="环外尺子演进（不写 run 目录）")
+    dream.add_argument(
+        "--offline",
+        action="store_true",
+        help="显式声明离线执行（默认行为，仅作可读标注）",
+    )
+    dream.add_argument("--propose", action="store_true", help="生成候选策略提案（默认动作）")
+    dream.add_argument("--approve", default=None, help="批准提案版本号（如 v1）")
+    dream.add_argument("--rollback", nargs="?", const="", default=None, help="回滚到上一版或指定版本")
+    dream.add_argument("--json", action="store_true")
+    dream.set_defaults(func=cmd_dream)
+
+    adopt = sub.add_parser("adopt-policy", parents=[common], help="把经验库策略采纳进 run")
+    adopt.add_argument("--version", required=True)
+    adopt.set_defaults(func=cmd_adopt_policy)
 
     return parser
 

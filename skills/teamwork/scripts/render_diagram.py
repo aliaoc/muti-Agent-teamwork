@@ -36,7 +36,7 @@ BOX_PHASES = [
     ("FINAL", "汇总", "FINAL"),
     ("GATE", "验收", "GATE"),
     ("REVIEW", "审核", "REVIEW"),
-    ("DREAM", "复盘/做梦", "DREAM"),
+    ("COACH", "教练复盘", "COACH"),
 ]
 BOX_INDEX = {name: idx for idx, (name, _, _) in enumerate(BOX_PHASES)}
 ROW1 = [(0.14 + idx * 0.24, 0.705) for idx in range(4)]
@@ -229,7 +229,7 @@ def _draw(state: dict, run_dir: Path):
 
     for idx, (name, label, _) in enumerate(BOX_PHASES[:4]):
         draw_phase_box(idx, *ROW1[idx], name, label)
-    # row2 顺序：FINAL, GATE, REVIEW, DREAM，但视觉从右到左，故 index 4..7 对应 cx
+    # row2 顺序：FINAL, GATE, REVIEW, COACH，但视觉从右到左，故 index 4..7 对应 cx
     for offset, idx in enumerate(range(4, 8)):
         cx = ROW1[3 - offset][0]
         cy = ROW2[offset][1]
@@ -267,7 +267,7 @@ def _draw(state: dict, run_dir: Path):
         fontsize=7.5,
         color="#C0392B",
     )
-    # DREAM → CLASSIFY 下一轮（左侧边距折线）
+    # COACH → CLASSIFY 下一轮（左侧边距折线）
     ax.plot([0.0425, 0.016, 0.016], [0.564, 0.564, 0.742], color="#8E44AD", lw=1.2, ls="--", zorder=1)
     _arrow(ax, (0.016, 0.742), (0.0425, 0.749), dashed=True, color="#8E44AD", lw=1.2, rad=0)
     ax.text(

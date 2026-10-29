@@ -1,40 +1,34 @@
 ---
 schema_version: 1
 iteration: 1
-tier: Small
-objective: "示例：写出一句可验收的目标（谁、做什么、达到什么标准）"
+tier: Medium
+objective: "第 1 轮：整理可行方案并给出证据"
 breakdown:
-  - desc: "子任务 1：<具体做什么>"
+  - desc: "检索与取证（先产出 sources.yaml）"
     assignee: w01
+  - desc: "方案对比"
+    assignee: w02
+  - desc: "写结论与风险"
+    assignee: w03
 accepted_criteria:
-  - "验收标准 1（能用命令/文件核对）"
+  - "结论有证据链"
+  - "风险已标注"
+  - "产物文件存在"
 risks:
-  - "风险 1：<可能失败的原因>"
-worker_count: 1
-alternatives: []
+  - "证据来源可能不足"
+worker_count: 3
+addresses_errors: []        # 当 state.coach.stuck_classes 非空时必填，逐条写计划层怎么改
+#  - {class: evidence_gap, mitigation: "单设取证 worker，并把验收提前到取证之后"}
 ---
 
 # 计划（第 1 轮）
 
-## 目标
+1. w01 检索与取证（先 `sources.yaml`，不写结论）
+2. w02 方案对比
+3. w03 写结论与风险
 
-<一句话，与 objective 一致>
+## 与教练的衔接
 
-## 拆分
-
-| worker | 任务 | 交付物 |
-| --- | --- | --- |
-| w01 | <子任务 1> | `iterations/iter-01/workers/w01_artifacts/...` |
-
-## 验收标准
-
-1. <可验证标准 1>
-2. <可验证标准 2>
-
-## 风险与对策
-
-- <风险 1> → <对策>
-
-## 备选方案（仅 Large）
-
-> Large 必须在 `alternatives` 里给 ≥2 个方案，并写选择理由；Small/Medium 可删掉本节。
+- 上一轮 `rsi_report.error_taxonomy` 的 `attributed_to` 若指向 `plan.step-N`，
+  本轮必须改拆分方式，而不是只让 worker "注意一下"。
+- 某类错误连续两轮复发时，`addresses_errors` 必须正面回应（脚本会核对）。

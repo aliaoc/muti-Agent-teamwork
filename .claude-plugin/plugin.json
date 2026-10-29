@@ -1,7 +1,7 @@
 {
   "name": "teamwork",
-  "version": "1.0.0",
-  "description": "多子 Agent 协作技能：按 Small/Medium/Large 分级，主 Agent 规划派发、Worker 跨轮复用、独立审核 Agent 评分、Dream-RSI 式审核策略复盘，按 N 轮迭代，全程 Markdown 产物落盘并渲染协作框架图。支持 Claude Code、DeepSeek Harness 与通用 Agent 运行时。",
+  "version": "2.0.0",
+  "description": "多子 Agent 协作技能：按 Small/Medium/Large 分级，主 Agent 规划派发、Worker 跨轮复用、独立审核 Agent 评分（L 级默认 A 通用 + B 引用核验）、COACH 阶段产出可执行改进条目并按 applies_to 切片下发、末轮由代码算出续跑建议、环外经验库与尺子演进；按 N 轮迭代，全程 Markdown 产物落盘并渲染协作框架图。支持 Claude Code、DeepSeek Harness、WorkBuddy 与通用 Agent 运行时。",
   "author": {
     "name": "aliaoc",
     "url": "https://github.com/aliaoc"
@@ -15,8 +15,10 @@
     "agent-skills",
     "claude-code",
     "deepseek-harness",
+    "workbuddy",
     "rsi",
     "recursive-self-improvement",
-    "orchestration"
+    "orchestration",
+    "citation-audit"
   ]
 }

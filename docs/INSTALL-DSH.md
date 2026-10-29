@@ -35,7 +35,7 @@ find "D:/apps/deepseek-harness/data/skills/teamwork" -name __pycache__ -type d -
 ```yaml
 ---
 name: teamwork
-description: 用户明确输入 `teamwork, N=<数字|?> 任务描述` 时使用：...
+description: 用户要求用 teamwork 跑任务时使用（三种写法等价）：…
 ---
 ```
 
@@ -50,7 +50,7 @@ description: 用户明确输入 `teamwork, N=<数字|?> 任务描述` 时使用�
    ```
 
 4. 预期：主 Agent 先判级（Small）、初始化 run 目录，然后按状态机推进；每阶段输出状态行，如
-   `Iteration 1/1 · Phase 分级 · Tier Small · Workers 2 · 策略 v0`。
+   `Iteration 1/1 · Phase 分级 · Tier Small · Workers 2/2 · Reviewers 1 · Score - · 策略 v0`。
 
 ## 4. 依赖
 

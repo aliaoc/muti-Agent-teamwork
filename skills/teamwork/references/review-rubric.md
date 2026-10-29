@@ -1,6 +1,10 @@
-# 审核 rubric 与 Dream-RSI 式复盘
+# 审核 rubric、引用核验与教练复盘
 
-## rubric v0（`review_policy/v0.md`）
+本文是「审核」与「教练」的全部硬约定。**所有规则都由 `scripts/teamwork_lib.py` 校验**，写错字段或算术不一致一律 `exit 2`。
+
+---
+
+## 1. rubric v0（`review_policy/v0.md`）
 
 | 维度 | 权重 | 关注点 |
 | --- | --- | --- |
@@ -11,59 +15,246 @@
 | 可维护与可回滚 maintainability | 10 | 结构清晰、可复现、可回滚 |
 | 成本效率 cost | 10 | 时间/调用/复杂度是否与收益匹配 |
 
-- **一票否决**（`gates_triggered` 命中即 FAIL）：`unsupported_claims` 无证据断言、`fabricated_evidence` 虚构证据、`off_topic` 答非所问、`claimed_pass_without_run` 未运行却声称通过。
-- 阈值：总分 `<60` → FAIL，`<85` → REVISE，`≥85` → PASS。
-- 总分 = Σ(维度分 × 权重 / 100)，四舍五入到整数；脚本会复核 `total` 与加权一致性。
-- 单个维度分差不是重点，重点是 `errors` 是否能落到具体文件/行。
+- 总分 = Σ(维度分 × 权重 / 100)，四舍五入到整数；脚本复核 `total` 与加权一致性。
+- 阈值：`<60` → FAIL，`<85` → REVISE，`≥85` → PASS（`REVISE_THRESHOLD` / `PASS_THRESHOLD`）。
+- **C1：权重唯一事实来源是当轮 rubric**。评审报告的 `weight` 必须等于 `review_policy/vN.md` 的 `weights`，不是硬编码常量——策略升版后权重变了，报告不改就会被拒。
 
-## 审核输入（review_packet.md）
+### 一票否决（`gates_triggered` 命中即 FAIL）
 
-`make-packet` 只放：任务、验收标准、artifacts（路径 + sha256）、rubric_version、reviewers、forbidden。**不放** run_report、主 Agent 观点、历史评审、iteration_summary —— 保证审核独立。
+| 门禁 | 含义 | 是否可被策略删除 |
+| --- | --- | --- |
+| `unsupported_claims` | 无证据断言 | ❌ 核心门禁 |
+| `fabricated_evidence` | 虚构证据（路径/文件不存在） | ❌ 核心门禁 |
+| `off_topic` | 答非所问 | ❌ 核心门禁 |
+| `claimed_pass_without_run` | 未运行却声称通过 | ❌ 核心门禁 |
+| `fabricated_citation` | 查无此文（来源不存在） | ✅ 可开关，默认开 |
 
-Reviewer 只准读 packet 与 packet 里列出的 artifacts；`inputs_read` 里出现禁止项会被校验拒绝。
+`validate_policy` 的规则：**核心门禁不可删**，其余门禁只允许 ±10 内的权重/开关变动；`gates` 里出现 `CORE_GATES` 之外的新门禁需要说明。
 
-## 多评审（默认 1 位，可 k 位）
+---
 
-- 默认 1 人；需要 k>1 时先向用户说明成本并确认，再 `orchestrator.py reviewers --count k`（框架支持 1–26）。
-- 每位评审各自独立开全新 subagent、互不可见；只读同一 packet；分别写 `review_report_A.md`…`review_report_<k>.md`。
-- 合并规则（脚本实现）：总分 = 各评审总分的平均；任一 FAIL → 合并 FAIL；同维度最大分差 >10 记入 `review_scores.md` 的 disagreements，由主 Agent 决定是否重审。
-- 多评审成本约 k 倍，仅在 Large / 高风险 / 争议 / 迭代次数较多时使用；审核人数不受 8 人上限约束（该上限只约束单任务内的 Worker+Final），由迭代次数与任务要求决定（当前实现 1–26 位，按单个任务计数）。
+## 2. 评审角色（A / B）
 
-## 复盘：Dream-RSI 式「做梦」（DREAM 阶段）
+| 角色 | `role` | 职责 |
+| --- | --- | --- |
+| A（通用） | `general` | 六维评分 + 一票否决 + errors/optimizations |
+| B（引用核验） | `citation_audit` | 逐条核验 `sources[]` 真实性，额外产出 `citation_audit` 段 |
 
-历史迭代桶 = **replay world**：把此前各轮的 `final_result.md`、`review_report_A.md`、`iteration_summary.md` 当作“世界”，用来重放候选 rubric，而不是重新执行任务。
+规则：
 
-每次 DREAM：
+- 默认 1 位评审（`general`）。
+- **L 级 + `citation_audit != off` 时脚本自动把评审设为 2 位并写 `roles = {A: general, B: citation_audit}`**，不需要人工 `reviewers --count 2`。
+- 若用户显式设过评审人数（`reviewers_set_by_user`），脚本不覆盖，只按用户给的人数分配角色。
+- `role: citation_audit` 的报告**必须**有 `citation_audit` 段；`role: general` 的报告**不得**出现该段（互相越权都会被拒）。
 
-1. 读本轮 review_report 的 `errors` / `optimizations`（以及历史轮的同类记录）。
-2. 提 ≤3 个 **rubric 变体**：只改 `review_policy/vN.md` 的权重、检查项、评分说明；不改任务、不改 Worker/Final、不改 rubric 的六维口径（除非有明确证据）。
-3. **重放**：用每个变体重新给历史迭代产物打分，记录 `replay_score`、区分度（历史轮之间分数是否拉开）、误报率。
-4. 按门槛决定 keep / promote：
+---
 
-| 门槛 | 规则 |
-| --- | --- |
-| 历史覆盖 | 至少在 2 条历史迭代上不差于当前版本 |
-| 噪声下限 | 提升 ≤ 5 分视为噪声，不晋级 |
-| 成本规则 | 新增检查项必须提升区分度，否则删掉 |
-| 退火预算 | 每次最多改 3 处；当 `current_iter ≥ ceil(n/2)` 后只允许改 1 处 |
-| 泄漏 critic | rubric 不得出现具体任务名/答案/样例路径（防止只对单轮定制） |
+## 3. 评审输入与独立性
 
-5. 写 `replay_ledger.md` 追加本轮 entry：
+`make-packet` 只放：任务、验收标准、artifacts（路径 + sha256）、`citations[]`、`citation_policy`、`roles`、rubric_version、forbidden。
+
+**不放入**：`run_report.md`、`state.json`、`iteration_summary.md`、历史评审、主 Agent 的观点。
+
+校验项：
+
+- `inputs_read` 中出现 `run_report` / `state.json` / `iteration_summary` / `review_report` 任一关键词 → 判独立性失效。
+- `independence_attestation` 必须为 `true`。
+- `evidence` 若是 run 内相对路径，必须真实存在；`http(s)://` URL 放行（不校验可达性，交由 B 核验）。
+
+---
+
+## 4. PASS 的证据密度（C4）
+
+防止「六维全 85 + errors 空」糊过去：
+
+1. PASS 报告**不允许有 errors**（有错就改判 REVISE）；
+2. 每个维度 **≥2 条** `evidence`；
+3. 全部 evidence 中 **≥3 条**必须指向实质产物，不能全部指向 `review_packet.md` 自身（自指漏洞）。
+
+---
+
+## 5. 多评审合并（`compute_merged_review`）
+
+- 总分 = 各评审总分的**算术平均**（四舍五入）。
+- **任一评审 FAIL → 合并 FAIL**（平均分不能吞掉否决）。
+- **C3：同一维度最大分差 > 10 → 禁止 PASS**，合并降级为 REVISE，并把分歧写进 `review_scores.md` 的 `disagreements` 与 `downgrade_reason`。
+- **引用核验口径**：B 报告的 `unverifiable / total > 20%` → 禁止 PASS。
+- 合并同时输出 `merged_dimensions`（逐维平均）供 `iteration_advisory.md` 找短板。
+
+---
+
+## 6. 引用核验（L 级，Reviewer B）
+
+### 6.1 sources[] 的登记（FINAL 阶段）
+
+`final_result.md` 必须登记 `sources[]`，每项：
 
 ```yaml
-entries:
-  - iteration: 1
-    policy_before: v0
-    candidates:
-      - {id: c1, change: "证据维度要求逐条给文件+行号", replay_score: 78}
-    decision: keep          # 或 promote
-    policy_after: v0        # promote 时写 v1，并先创建 review_policy/v1.md
-    reason: "提升未超过噪声下限"
+sources:
+  - id: S01                      # S01 形式，全局唯一
+    url: https://example.org/a   # 或 doi:/isbn:/path（内部资料）
+    title: "..."
+    used_for: "支撑 §2.1 的市场规模结论"
+    locator: "Table 3"           # 页码/章节/表格号，可空
 ```
 
-## 反模式（校验会拒或人工判 FAIL）
+`make-packet` 会把 `sources[]` 写进 packet 的 `citations[]`（上限 `CITATION_MAX_ITEMS = 40`），B 只能核验这个清单。
 
-- 审核报告只写“整体不错/建议优化”而不给证据 → 视为 unsupported_claims。
-- 给历史轮打统一的 90+ 分而不引用具体 artifact → 视为 fabricated_evidence。
-- 每轮都 promote 新 rubric 只为“看起来在进化” → 触犯成本规则/退火预算。
-- Reviewer 读了 run_report 或主 Agent 解释后再打分 → 独立性失效，报告作废重写。
+### 6.2 三把锁
+
+| 锁 | 规则 | 违反后果 |
+| --- | --- | --- |
+| **结构锁** | 判 `verified` 的条目必须给 `method` / `checked_at` / `locator` | 报错 |
+| **算术锁** | `coverage` 的 `total/audited/verified/unverifiable/misattributed/fabricated` 必须与 `items` 明细逐项一致 | 报错 |
+| **清单锁** | 核验集合必须**恰好等于** packet 的 `citations[]`：漏项、多出清单外 id 都报错（覆盖率 100%） | 报错 |
+
+### 6.3 抽样锁（GATE 之后，主 Agent 执行）
+
+主 Agent 从 `verified` 里**随机抽 ≥2 条**复核 `method` 所述动作是否真的做过（打开来源、比对数字），把结果写进 `gate.md` 的 `citation_spotcheck`。若抽查发现「声称 verified 但实际没查」，B 的报告作废重写。
+
+### 6.4 判定与后果
+
+| verdict | 含义 | 后果 |
+| --- | --- | --- |
+| `verified` | 来源存在且结论一致 | — |
+| `unverifiable` | 打不开/无权限/需付费，无法确认 | 计入比例；>20% 禁 PASS |
+| `misattributed` | 来源存在但结论被写反/夸大 | **evidence 维度封顶 60** |
+| `fabricated` | 查无此文 | **一票否决 `fabricated_citation`** |
+| `stale` | 来源过期（政策/价格/版本已变） | 记录，不单独否决 |
+
+- **离线模式（`mode: offline`）禁止判 `verified`**：没有网络只能记 `unverifiable`，并给出警告——离线核验不得让合并结论 PASS。
+- `fabricated` 一旦出现但 `gates_triggered` 没写 `fabricated_citation` → 直接报错。
+
+---
+
+## 7. 教练（COACH，环内 RSI）
+
+COACH 是**环内**角色：每轮评审结束后运行，读评审报告产出可执行的改进条目。它**不评分、不改产物、不派活**。
+
+### 7.1 输入
+
+| 输入 | 说明 |
+| --- | --- |
+| 本轮 `review_report_*.md` | 全部评审的 `errors` / `optimizations` |
+| `review_scores.md` | 合并分、维度分、分歧 |
+| 上轮 `rsi_report.md` | 用于命中率与 stuck 判定 |
+| 上轮 `dispatch.md` | 已下发的教练条目（`coach_items`） |
+
+**不读** run_report 与主 Agent 的解释（与评审同等的独立性要求）。
+
+### 7.2 输出结构（`iterations/iter-NN/rsi_report.md`）
+
+```yaml
+schema_version: 1
+iteration: 2
+tier: Large
+verdict_in: REVISE            # 必须等于本轮合并结论
+score_in: 74                  # 必须等于本轮合并总分
+error_taxonomy:               # 错误分类 + 信用分配
+  - class: evidence_gap
+    count: 4
+    attributed_to: [w03, plan.step-2]
+items:                        # ≤8 条，must_fix ≤3 条
+  - id: C1
+    from_error: [E2, B:E5]    # 必须是本轮真实 error id
+    applies_to: [w03]         # 只下发给这些 worker
+    priority: must_fix        # must_fix / should_fix / nice_to_have
+    root_cause: "..."
+    action: "..."
+    verification: "..."       # 如何验证这条被做到
+escalations:                  # 连续两轮复发的类别必须升级
+  - class: evidence_gap
+    reason: "..."
+rsi_skipped: ""               # 本轮不教练时的理由（PASS 轮可跳过）
+advisory_input:               # 仅最后一轮
+  estimated_gain_next_round: 8
+  remaining_gaps: ["..."]
+  diminishing: true
+  rationale: "至少 10 字的理由，由教练写"
+```
+
+### 7.3 硬约束（全部代码校验）
+
+| 约束 | 规则 |
+| --- | --- |
+| 结构锁 | 每条 `items` 必须有 `root_cause` / `action` / `verification` / `priority` / `applies_to` / `from_error` |
+| 事实锁 | 报告正文与条目里**不得出现 packet 之外的 URL**（教练不得引入新事实） |
+| 引用锁 | `from_error` 必须指向**本轮真实存在**的 error id；多评审下有歧义要写 `A:E3` 形式 |
+| 归属锁 | `attributed_to` / `applies_to` 只能是 `wNN` / `plan.step-N` / `final` / `main` / `all` |
+| 预算锁 | `items ≤ 8`，`must_fix ≤ 3` |
+| 升级锁 | `state.coach.stuck_classes`（连续两轮复发）里的每个类别，必须出现在 `escalations` |
+| 跳过锁 | FAIL/REVISE 轮必须给 `items` 或写明 `rsi_skipped`；PASS 轮可跳过但要写理由 |
+| 越权锁 | 教练不得改 `final_result.md` / 不得写 `gate.md` / 不得指定 worker 以外的人干活 |
+
+### 7.4 切片锁（DISPATCH 阶段强制）
+
+`coach_items` 按 `applies_to` 逐 worker 下发：
+
+- `applies_to: [w03]` 的条目**只能**出现在 `w03` 的 `coach_items` 里；
+- 声称「已下发」但目标 worker 的 `coach_items` 里没有 → 报错「该 worker 的 coach_items 里没有」；
+- 不想下发必须显式写 `coach_deferred: [{id, reason}]`，**不允许静默删除**。
+
+### 7.5 教练命中率
+
+`state.coach.history[]` 记录每轮条目与其覆盖的错误：
+
+```
+hit_rate = 上一轮条目覆盖的错误中，本轮不再出现的比例
+```
+
+- 第 1 轮没有「上一轮」，`hit_rate = None`（不参与统计）。
+- 命中率持续走低 → 说明教练在写无效条目，应在 `dream_hints` 里提出（但**环内不改尺子**）。
+
+---
+
+## 8. 末轮建议（`iteration_advisory.md`）
+
+数字由代码算，理由由教练写——防止「自评 90 分、顺便建议再来三轮」。
+
+| 字段 | 来源 |
+| --- | --- |
+| `score` / `verdict` / `prev_score` / `delta` / `trend` | 代码读 `state.scores` |
+| `weakest_dimension` / `gap_to_pass` | 代码读合并维度分 |
+| `recommendation` / `recommended_rounds` | 代码按规则表算 |
+| `rationale` | 教练 `advisory_input.rationale`（≥10 字） |
+
+推荐规则（`compute_advisory`）：
+
+| 情形 | 建议 |
+| --- | --- |
+| FAIL 且 gap > 20 | continue，2 轮 |
+| FAIL 且 gap ≤ 20 | continue，1 轮 |
+| REVISE 且本轮无提升、历史最大增益 ≤2 | stop，0 轮 |
+| REVISE 且 gap ≤ 单轮预期增益 | continue，1 轮 |
+| REVISE 且 gap > 单轮预期增益 | continue，2 轮 |
+| PASS 且本轮提升 < 噪声下限(5) | stop |
+| PASS 且最弱维度 < 80 | continue，1 轮 |
+| PASS 且最弱维度 ≥ 80 | stop |
+
+轮数上限 `min(3, 10 - n)`；算出 0 轮即 `recommendation: stop`。
+
+`iteration_advisory.md` 由脚本生成，**手改会被 `check` 逐字段比对拒绝**。
+
+---
+
+## 9. 错误类别（`error_taxonomy.class`）
+
+`unsupported_claim` / `evidence_gap` / `citation_unverified` / `citation_fabricated` / `off_topic` / `incomplete_coverage` / `arithmetic_error` / `format_violation` / `plan_gap` / `tool_failure` / `cost_overrun`；旧格式字符串 errors 合成时用 `unclassified`（统计复发率时忽略）。
+
+同一类别**连续两轮**出现 → 记入 `state.coach.stuck_classes`：
+
+- 下一轮 `plan.md` 必须写 `addresses_errors: [<class>...]`；
+- 本轮 `rsi_report.md` 必须写 `escalations`。
+
+这条把「反复犯同一个错」从提示词劝告变成**状态机无法绕过的检查**。
+
+---
+
+## 10. 反模式（校验会拒或人工判 FAIL）
+
+- 评审只写「整体不错/建议优化」而不给证据 → `unsupported_claims`。
+- 六维全 85、errors 空、evidence 全指 packet → C4 证据密度拒绝。
+- 两位评审分数差 30 分但平均仍 PASS → C3 分歧门禁降级。
+- 教练条目 `from_error` 指向不存在的 error，或把 `applies_to` 写成不存在的 worker → 引用锁/归属锁拒绝。
+- 教练条目里塞新链接当作「补充资料」 → 事实锁拒绝。
+- 反复 promote 策略只为「看起来在进化」 → 环外 `dream` 的门槛（holdout / golden / noise_floor）拒绝。
