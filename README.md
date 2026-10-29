@@ -1,6 +1,12 @@
 # teamwork · 多子 Agent 迭代协作插件
 
 <p align="center">
+  <a href="https://github.com/aliaoc/muti-Agent-teamwork/actions/workflows/selftest.yml"><img alt="selftest" src="https://github.com/aliaoc/muti-Agent-teamwork/actions/workflows/selftest.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <a href="https://www.python.org/downloads/"><img alt="python" src="https://img.shields.io/badge/python-3.10%2B-blue.svg"></a>
+</p>
+
+<p align="center">
   <b>把复杂任务交给「主 Agent + 多个 Worker + 独立审核 Agent」，分级、N 轮迭代、每阶段落盘、可审计。</b><br/>
   Claude Code / DeepSeek Harness / 任意 Agent 运行时通用 · Python 3.10+ · MIT
 </p>
