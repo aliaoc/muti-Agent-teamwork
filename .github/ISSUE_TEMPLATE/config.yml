@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 使用问题 / 快速上手
+    url: https://github.com/aliaoc/muti-Agent-teamwork/blob/main/README.md
+    about: 先看 README 的「快速开始 / 调用方式与命令 / 常见问题」。
+  - name: 贡献流程
+    url: https://github.com/aliaoc/muti-Agent-teamwork/blob/main/CONTRIBUTING.md
+    about: 提交 PR 之前请读贡献指南（唯一事实来源、同步规则、兼容性纪律）。

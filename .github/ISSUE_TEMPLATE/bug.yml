@@ -1,0 +1,77 @@
+name: Bug 报告
+description: 报告一个可复现的问题（脚本报错、自检失败、产物不符合契约等）
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！请先确认：**不要在 issue 里贴密钥/Token**，运行产物只贴必要片段。
+        提交前建议先看 `README` 的 FAQ 与 `docs/COMMANDS.md`。
+
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: 使用方式
+      options:
+        - Claude Code（插件）
+        - Claude Code（项目/用户技能）
+        - DSH
+        - 纯 CLI（orchestrator.py）
+        - 其他 / 不确定
+    validations:
+      required: true
+
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      description: 操作系统、Python 版本、是否装了 matplotlib、仓库 commit
+      placeholder: "Windows 11 / Python 3.12.4 / 无 matplotlib / commit 9bf32b3"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 命令、输入、关键文件路径（可脱敏）
+      placeholder: |
+        1. 执行 `teamwork, N=2 ……`
+        2. 运行 `python3 skills/teamwork/scripts/orchestrator.py next <run>`
+        3. ……
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为 / 报错
+      description: 完整 traceback 或 `check` 的错误列表；日志请用代码块
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: selftest
+    attributes:
+      label: 自检结果
+      description: 贴 `python3 tools/check.py` 的最后若干行（若已运行）
+      render: text
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 确认
+      options:
+        - label: 我已搜索现有 issue，没有重复
+          required: true
+        - label: 我使用的版本是 main 分支最新 commit（或说明了旧版本）
+          required: true

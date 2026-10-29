@@ -30,6 +30,7 @@
 - [13. 开发与测试](#13-开发与测试)
 - [14. 常见问题](#14-常见问题)
 - [15. 参考与致谢](#15-参考与致谢)
+- [16. 贡献](#16-贡献)
 
 ---
 
@@ -86,12 +87,15 @@ muti-Agent-teamwork/
 ├── .claude-plugin/
 │   ├── plugin.json                  # Claude Code 插件清单
 │   └── marketplace.json             # 单插件市场清单（/plugin marketplace add owner/repo）
+├── CONTRIBUTING.md                  # 贡献指南：唯一事实来源 / 同步规则 / PR 流程 / 网页编辑
+├── CHANGELOG.md                     # 版本记录（Keep a Changelog）
 ├── commands/run.md                  # /teamwork:run 快捷命令
 ├── install/                         # install.sh / install.ps1
 ├── tools/sync_claude.py             # 同步 + --check（CI 用）
+├── tools/check.py                   # 本地一条命令等价 CI（py_compile + sync + selftest）
 ├── examples/                        # 快速上手示例
 ├── docs/                            # ARCHITECTURE / RSI-DESIGN / COMMANDS / INSTALL-*
-└── .github/workflows/selftest.yml   # CI：多 OS × 多 Python 版本跑 13 阶段自检
+└── .github/                         # CI（selftest）、PR 模板、Issue 模板、CODEOWNERS
 ```
 
 ---
@@ -453,6 +457,9 @@ Iteration 2/3 · Phase 审核 · Tier Large · Workers 6 · Score 72 FAIL · 策
 ## 13. 开发与测试
 
 ```bash
+# 0) 一条命令等价 CI（py_compile + sync --check + 13 阶段自检；提交前强烈推荐）
+python3 tools/check.py
+
 # 1) 依赖：仅 PyYAML（matplotlib 可选，仅 PNG 需要）
 python3 -m pip install pyyaml
 
@@ -549,6 +556,15 @@ Small 默认 1 轮、1–2 个 Worker；Medium 2 轮 3–4 个；只有 Large �
 - **DeepSeek Harness 技能机制** — 本地 `data/skills/` 目录 + `SKILL.md` frontmatter（name/description 触发）。
 
 > 本仓库中的 RSI 实现是**工程近似**：我们借用其"历史 replay + 策略离线进化 + 只改策略"的思想，但不对应论文的原始实验设置，也没有复现其分数。论文出处仅用于说明设计来源。
+
+---
+
+## 16. 贡献
+
+- 完整流程见 [CONTRIBUTING.md](CONTRIBUTING.md)：唯一事实来源（只改 `skills/teamwork/`）、生成物同步（`.claude/skills` 必须由 `tools/sync_claude.py` 生成）、兼容性纪律、PR 规范，以及**不装本地环境时在 GitHub 网页上直接编辑**的步骤。
+- 提交前跑 `python3 tools/check.py`；PR 需要 4 个 CI 矩阵任务全绿。
+- 计划类改动（阶段/产物字段/评分规则/默认值）请先开 Issue 讨论；小修与文档可直接提 PR。
+- 首次贡献建议从文档、示例、FAQ 或 `.github/ISSUE_TEMPLATE` 里标注的需求入手。
 
 ---
 

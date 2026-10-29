@@ -14,6 +14,7 @@ teamwork-runs/
 .tmp-runs/
 .tmp-runs-*/
 .tmp-nompl/
+.tmp-check/
 
 # ---- 日志与临时文件 ----
 *.log
