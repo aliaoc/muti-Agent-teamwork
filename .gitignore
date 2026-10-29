@@ -1,0 +1,33 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- teamwork 运行产物（每个任务一个 run 目录，不入库）----
+teamwork-runs/
+.tmp-runs/
+.tmp-runs-*/
+.tmp-nompl/
+
+# ---- 日志与临时文件 ----
+*.log
+*.tmp
+*.bak
+tmp_*.py
+
+# ---- 编辑器 / 系统 ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# ---- 本地覆盖 ----
+.env
+.env.local

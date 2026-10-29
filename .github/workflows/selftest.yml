@@ -1,0 +1,38 @@
+name: selftest
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  selftest:
+    name: selftest (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: 安装依赖
+        run: python -m pip install --upgrade pip pyyaml
+
+      - name: 校验 .claude/skills 与 skills/ 同步
+        run: python tools/sync_claude.py --check
+
+      - name: py_compile
+        run: python -m py_compile skills/teamwork/scripts/teamwork_lib.py skills/teamwork/scripts/render_text.py skills/teamwork/scripts/render_diagram.py skills/teamwork/scripts/orchestrator.py skills/teamwork/scripts/validate.py skills/teamwork/scripts/selftest.py
+
+      - name: 运行 13 阶段自检
+        env:
+          TEAMWORK_RUNS_ROOT: ${{ runner.temp }}/teamwork-runs
+          PYTHONIOENCODING: utf-8
+        run: python skills/teamwork/scripts/selftest.py
