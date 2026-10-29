@@ -468,7 +468,7 @@ python3 skills/teamwork/scripts/validate.py <run_dir> --phase REVIEW --json
 ```
 
 - `selftest.py` 会生成临时 run 到 `$TEAMWORK_RUNS_ROOT/_selftest/`；默认在仓库内 `teamwork-runs/`（已被 .gitignore）。
-- CI 在 Ubuntu/Windows × Python 3.10/3.12 上跑：`sync --check` + `py_compile` + 13 阶段自检。
+- CI 在 Ubuntu/Windows × Python 3.10/3.12 上跑：`sync --check` + `py_compile` + 13 阶段自检；其中「Ubuntu + py3.12」装 matplotlib 覆盖 PNG 渲染路径，其余组合验证无 matplotlib 的降级路径（PNG 断言自动跳过）。
 - 修改脚本后请同时更新 `.claude/skills/teamwork`（`python3 tools/sync_claude.py`），否则 CI 失败。
 
 ---

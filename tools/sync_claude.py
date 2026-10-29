@@ -26,6 +26,21 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SRC = REPO_ROOT / "skills" / "teamwork"
 DEFAULT_DST = REPO_ROOT / ".claude" / "skills" / "teamwork"
 
+
+def _prefer_utf8_stdio() -> None:
+    """Windows 控制台/CI 默认可能是 cp1252，直接 print 中文会 UnicodeEncodeError。"""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):
+            pass
+
+
+_prefer_utf8_stdio()
+
 # 这些内容不应该被复制/校验
 IGNORE_DIR_PARTS = {"__pycache__", ".pytest_cache", "teamwork-runs", ".git"}
 IGNORE_SUFFIXES = {".pyc", ".pyo"}

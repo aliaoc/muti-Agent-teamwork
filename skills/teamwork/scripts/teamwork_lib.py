@@ -20,6 +20,24 @@ from typing import Any
 
 import yaml
 
+
+def _prefer_utf8_stdio() -> None:
+    """Windows 控制台/管道默认可能是 cp1252、cp936，直接 print 中文会 UnicodeEncodeError。
+
+    这里把标准输出/错误流切到 UTF-8；被重定向到 StringIO 等无 reconfigure 的对象时跳过。
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):
+            pass
+
+
+_prefer_utf8_stdio()
+
 SCHEMA_VERSION = 1
 DEFAULT_RUNS_ROOT = Path(
     os.environ.get("TEAMWORK_RUNS_ROOT")

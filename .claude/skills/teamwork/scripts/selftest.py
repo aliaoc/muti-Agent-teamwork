@@ -3,14 +3,15 @@
 覆盖：
 - 状态机全流程（INIT→…→DONE→finish），两轮迭代，第一轮含 REWORK 打回；
 - 双评审（A+B）与单评审切换；评审独立性（缺 B 时拒绝推进）；
-- 每个阶段都渲染 framework.png / PROGRESS.md / framework.mmd；
+- 每个阶段都渲染 framework.mmd / PROGRESS.md（装了 matplotlib 时另出 framework.png）；
 - 校验不通过时拒绝推进（exit 2 的等价异常）；
 - CLI 入口（init/advance/status/check/next）的退出码与 JSON 输出。
 
-运行：python3 scripts/selftest.py（Windows 用 python；需要 pip install pyyaml matplotlib）。
+运行：python3 scripts/selftest.py（Windows 用 python；必须 pip install pyyaml，matplotlib 可选）。
 """
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import shutil
@@ -26,6 +27,10 @@ import teamwork_lib as lib  # noqa: E402
 SELFTEST_DIR = Path(
     os.environ.get("TEAMWORK_RUNS_ROOT", str(lib.DEFAULT_RUNS_ROOT))
 ) / "_selftest"
+
+# matplotlib 是可选依赖：未安装时只产出 PROGRESS.md / framework.mmd，跳过 PNG 断言。
+# TEAMWORK_NO_MPL=1 可强制模拟「未安装」路径（CI/本地都可复现）。
+HAS_MPL = os.environ.get("TEAMWORK_NO_MPL") != "1" and importlib.util.find_spec("matplotlib") is not None
 
 FAILURES: list[str] = []
 
@@ -308,7 +313,11 @@ def main() -> int:
     print(f"  run = {run}")
     state = expect_phase(run, "INIT")
     check(state["n_mode"] == "explicit" and state["explicit_n"] == 2, "N=2 显式模式")
-    check((run / "framework.png").exists() and (run / "framework.png").stat().st_size > 0, "framework.png 已生成")
+    if HAS_MPL:
+        check((run / "framework.png").exists() and (run / "framework.png").stat().st_size > 0, "framework.png 已生成")
+    else:
+        print("  [skip] 未安装 matplotlib，跳过 framework.png 检查（framework.mmd/PROGRESS.md 仍校验）")
+    check((run / "framework.mmd").exists(), "framework.mmd 已生成")
     check((run / "PROGRESS.md").exists(), "PROGRESS.md 已生成")
     check((run / "review_policy/v0.md").exists(), "review_policy/v0.md 已生成")
 
@@ -430,7 +439,10 @@ def main() -> int:
     result = lib.finish_run(run)
     state = state_of(run)
     check(state["finished"] is True, "finished=true")
-    check((run / "score_trend.png").exists() and (run / "score_trend.png").stat().st_size > 0, "score_trend.png 已生成")
+    if HAS_MPL:
+        check((run / "score_trend.png").exists() and (run / "score_trend.png").stat().st_size > 0, "score_trend.png 已生成")
+    else:
+        print("  [skip] 未安装 matplotlib，跳过 score_trend.png 检查（按文字产物验收）")
     check(Path(result["run_dir"]).exists(), "finish 返回 run_dir")
     check((run / "framework.mmd").read_text(encoding="utf-8").startswith("flowchart"), "framework.mmd 是 Mermaid flowchart")
     check("PASS" in (run / "PROGRESS.md").read_text(encoding="utf-8"), "PROGRESS.md 含迭代记录")
@@ -678,8 +690,12 @@ def main() -> int:
             print(f" - {item}")
         return 1
     print(f"自测全部通过。run 目录：{run}")
-    print(f"框架图：{run / 'framework.png'}")
-    print(f"分数轨迹图：{run / 'score_trend.png'}")
+    if HAS_MPL:
+        print(f"框架图：{run / 'framework.png'}（另见 framework.mmd、PROGRESS.md）")
+        print(f"分数轨迹图：{run / 'score_trend.png'}")
+    else:
+        print(f"框架图（文字版）：{run / 'framework.mmd'}、{run / 'PROGRESS.md'}")
+        print("未安装 matplotlib：跳过 PNG（安装后自动生成 framework.png / score_trend.png）")
     return 0
 
 
